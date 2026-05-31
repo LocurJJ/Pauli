@@ -19,13 +19,13 @@ const maxPower = 1;
 const minShotSpeed = 260;
 const maxShotSpeed = 850;
 const wall = {
-  x: 540,
-  y: 170,
-  width: 44,
-  height: 225,
-  minY: 95,
-  maxY: 315,
-  speed: 120,
+  x: 530,
+  y: 150,
+  width: 64,
+  height: 275,
+  minY: 80,
+  maxY: 255,
+  speed: 125,
   direction: 1,
 };
 
@@ -56,7 +56,7 @@ let chargeDirection = 1;
 let arrow = null;
 let gameOver = false;
 let lastTime = performance.now();
-let level = 2;
+let level = 1;
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -98,7 +98,17 @@ function updateUi() {
   powerText.textContent = `${Math.round(chargePower * 100)}%`;
   turnLabel.textContent = gameOver ? "Partida terminada" : `Turno: ${players[turn].name}`;
   levelLabel.textContent = level === 2 ? "Nivel 2: pared movil" : "Nivel 1: duelo libre";
-  levelButton.textContent = level === 2 ? "Cambiar a nivel 1" : "Cambiar a nivel 2";
+
+  if (level === 1 && !gameOver) {
+    levelButton.textContent = "Nivel 2 bloqueado";
+    levelButton.disabled = true;
+  } else if (level === 1 && gameOver) {
+    levelButton.textContent = "Avanzar al nivel 2";
+    levelButton.disabled = false;
+  } else {
+    levelButton.textContent = "Volver al nivel 1";
+    levelButton.disabled = false;
+  }
 }
 
 function healthColor(health) {
@@ -149,7 +159,9 @@ function applyDamage(target, zone) {
   message.textContent = `${target.name} recibió un flechazo en ${labelByZone[zone]}: -${damage}.`;
   if (target.health <= 0) {
     gameOver = true;
-    message.textContent = `${players[turn].name} ganó la partida.`;
+    message.textContent = level === 1
+      ? `${players[turn].name} ganó. Ahora podés avanzar al nivel 2.`
+      : `${players[turn].name} ganó el nivel 2.`;
   }
 }
 
@@ -289,43 +301,33 @@ function drawWall() {
   const rect = getWallRect();
 
   ctx.save();
-  ctx.fillStyle = "rgba(0, 0, 0, 0.22)";
-  ctx.fillRect(rect.left + 7, rect.top + 7, wall.width, wall.height);
+  ctx.fillStyle = "rgba(0, 0, 0, 0.28)";
+  ctx.fillRect(rect.left + 8, rect.top + 8, wall.width, wall.height);
 
   const gradient = ctx.createLinearGradient(rect.left, rect.top, rect.right, rect.top);
-  gradient.addColorStop(0, "#5b6570");
-  gradient.addColorStop(0.5, "#b6c0ca");
-  gradient.addColorStop(1, "#49525c");
+  gradient.addColorStop(0, "#6b737d");
+  gradient.addColorStop(0.5, "#d5dde5");
+  gradient.addColorStop(1, "#535c66");
   ctx.fillStyle = gradient;
   ctx.fillRect(rect.left, rect.top, wall.width, wall.height);
 
-  ctx.strokeStyle = "#1a2027";
-  ctx.lineWidth = 4;
+  ctx.strokeStyle = "#f1c94c";
+  ctx.lineWidth = 5;
   ctx.strokeRect(rect.left, rect.top, wall.width, wall.height);
 
-  ctx.strokeStyle = "rgba(255,255,255,0.34)";
+  ctx.strokeStyle = "rgba(20,25,30,0.45)";
   ctx.lineWidth = 2;
-  for (let y = rect.top + 22; y < rect.bottom; y += 34) {
+  for (let y = rect.top + 24; y < rect.bottom; y += 34) {
     ctx.beginPath();
-    ctx.moveTo(rect.left + 7, y);
-    ctx.lineTo(rect.right - 7, y);
+    ctx.moveTo(rect.left + 8, y);
+    ctx.lineTo(rect.right - 8, y);
     ctx.stroke();
   }
 
-  ctx.fillStyle = "rgba(255,255,255,0.68)";
-  ctx.beginPath();
-  ctx.moveTo(rect.left + wall.width / 2, wall.minY - 28);
-  ctx.lineTo(rect.left + wall.width / 2 - 9, wall.minY - 10);
-  ctx.lineTo(rect.left + wall.width / 2 + 9, wall.minY - 10);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.moveTo(rect.left + wall.width / 2, wall.maxY + wall.height + 28);
-  ctx.lineTo(rect.left + wall.width / 2 - 9, wall.maxY + wall.height + 10);
-  ctx.lineTo(rect.left + wall.width / 2 + 9, wall.maxY + wall.height + 10);
-  ctx.closePath();
-  ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.85)";
+  ctx.font = "800 18px Segoe UI, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("PARED", rect.left + wall.width / 2, rect.top - 12);
   ctx.restore();
 }
 
@@ -466,7 +468,7 @@ function draw() {
     ctx.textAlign = "center";
     ctx.fillText(`${players[turn].name} gana`, canvas.width / 2, canvas.height / 2 - 10);
     ctx.font = "600 22px Segoe UI, sans-serif";
-    ctx.fillText("Tocá Reiniciar para jugar otra vez", canvas.width / 2, canvas.height / 2 + 34);
+    ctx.fillText(level === 1 ? "Tocá Avanzar al nivel 2" : "Tocá Reiniciar para jugar otra vez", canvas.width / 2, canvas.height / 2 + 34);
   }
 }
 
@@ -489,14 +491,17 @@ function resetGame() {
   chargeDirection = 1;
   arrow = null;
   gameOver = false;
-  wall.y = 170;
+  wall.y = 150;
   wall.direction = 1;
-  message.textContent = "Apunta con el mouse. Mantené click para cargar y soltá para disparar.";
+  message.textContent = level === 2
+    ? "Nivel 2: la pared móvil bloquea las flechas."
+    : "Apunta con el mouse. Mantené click para cargar y soltá para disparar.";
   updateUi();
 }
 
-function toggleLevel() {
-  level = level === 2 ? 1 : 2;
+function changeLevel() {
+  if (level === 1 && !gameOver) return;
+  level = level === 1 ? 2 : 1;
   resetGame();
 }
 
@@ -527,7 +532,7 @@ canvas.addEventListener("touchend", (event) => {
 });
 
 resetButton.addEventListener("click", resetGame);
-levelButton.addEventListener("click", toggleLevel);
+levelButton.addEventListener("click", changeLevel);
 
 resetGame();
 requestAnimationFrame(loop);
