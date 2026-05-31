@@ -176,6 +176,17 @@ button:hover {
   background: #2674bf;
 }
 
+button:disabled {
+  border-color: #556371;
+  background: #26313c;
+  color: #98a6b4;
+  cursor: not-allowed;
+}
+
+button:disabled:hover {
+  background: #26313c;
+}
+
 @media (max-width: 760px) {
   .topbar {
     grid-template-columns: 1fr;
