@@ -21,8 +21,8 @@ const maxShotSpeed = 850;
 const wall = {
   x: 530,
   y: 150,
-  width: 64,
-  height: 275,
+  width: 50,
+  height: 200,
   minY: 80,
   maxY: 255,
   speed: 125,
@@ -36,7 +36,7 @@ const players = [
     y: groundY,
     facing: 1,
     color: "#56a5ff",
-    health: 100,
+    health: 120,
   },
   {
     name: "Pauli",
@@ -44,7 +44,7 @@ const players = [
     y: groundY,
     facing: -1,
     color: "#ff9856",
-    health: 100,
+    health: 150,
   },
 ];
 
