@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Duelo de Arqueros 1v1</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="game-shell">
+      <section class="topbar" aria-label="Marcador">
+        <div class="player-card player-one">
+          <span class="player-name">Jugador 1</span>
+          <div class="health-track">
+            <div id="healthP1" class="health-fill"></div>
+          </div>
+          <span id="healthTextP1" class="health-text">100</span>
+        </div>
+
+        <div class="status-panel">
+          <strong id="turnLabel">Turno: Jugador 1</strong>
+          <span id="message">Apunta con el mouse. Mantené click para cargar y soltá para disparar.</span>
+        </div>
+
+        <div class="player-card player-two">
+          <span class="player-name">Jugador 2</span>
+          <div class="health-track">
+            <div id="healthP2" class="health-fill"></div>
+          </div>
+          <span id="healthTextP2" class="health-text">100</span>
+        </div>
+      </section>
+
+      <section class="arena-wrap">
+        <canvas id="gameCanvas" width="1120" height="620" aria-label="Arena de duelo de arqueros"></canvas>
+        <div class="power-panel" aria-label="Fuerza del tiro">
+          <span>Fuerza</span>
+          <div class="power-track">
+            <div id="powerFill" class="power-fill"></div>
+          </div>
+          <strong id="powerText">0%</strong>
+        </div>
+      </section>
+
+      <section class="controls">
+        <button id="resetButton" type="button">Reiniciar</button>
+        <span>Impactos: pie 20, cuerpo 40, cabeza 80.</span>
+      </section>
+    </main>
+
+    <script src="game.js"></script>
+  </body>
+</html>
