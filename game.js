@@ -10,12 +10,24 @@ const message = document.getElementById("message");
 const powerFill = document.getElementById("powerFill");
 const powerText = document.getElementById("powerText");
 const resetButton = document.getElementById("resetButton");
+const levelButton = document.getElementById("levelButton");
+const levelLabel = document.getElementById("levelLabel");
 
 const groundY = 530;
 const gravity = 820;
 const maxPower = 1;
 const minShotSpeed = 260;
 const maxShotSpeed = 850;
+const wall = {
+  x: 540,
+  y: 170,
+  width: 44,
+  height: 225,
+  minY: 95,
+  maxY: 315,
+  speed: 120,
+  direction: 1,
+};
 
 const players = [
   {
@@ -24,7 +36,7 @@ const players = [
     y: groundY,
     facing: 1,
     color: "#56a5ff",
-    health: 120,
+    health: 100,
   },
   {
     name: "Pauli",
@@ -32,7 +44,7 @@ const players = [
     y: groundY,
     facing: -1,
     color: "#ff9856",
-    health: 150,
+    health: 100,
   },
 ];
 
@@ -44,6 +56,7 @@ let chargeDirection = 1;
 let arrow = null;
 let gameOver = false;
 let lastTime = performance.now();
+let level = 2;
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -84,6 +97,8 @@ function updateUi() {
   powerFill.style.width = `${Math.round(chargePower * 100)}%`;
   powerText.textContent = `${Math.round(chargePower * 100)}%`;
   turnLabel.textContent = gameOver ? "Partida terminada" : `Turno: ${players[turn].name}`;
+  levelLabel.textContent = level === 2 ? "Nivel 2: pared movil" : "Nivel 1: duelo libre";
+  levelButton.textContent = level === 2 ? "Cambiar a nivel 1" : "Cambiar a nivel 2";
 }
 
 function healthColor(health) {
@@ -113,7 +128,6 @@ function releaseShot() {
     vy: aim.y * speed,
     angle: Math.atan2(aim.y, aim.x),
     shooter: turn,
-    settled: false,
   };
   isCharging = false;
   message.textContent = "Flecha en vuelo...";
@@ -152,7 +166,48 @@ function detectHit(target, point) {
   return null;
 }
 
+function updateWall(delta) {
+  if (level !== 2 || gameOver) return;
+  wall.y += wall.direction * wall.speed * delta;
+  if (wall.y >= wall.maxY) {
+    wall.y = wall.maxY;
+    wall.direction = -1;
+  } else if (wall.y <= wall.minY) {
+    wall.y = wall.minY;
+    wall.direction = 1;
+  }
+}
+
+function getWallRect() {
+  return {
+    left: wall.x,
+    right: wall.x + wall.width,
+    top: wall.y,
+    bottom: wall.y + wall.height,
+  };
+}
+
+function pointInsideRect(point, rect) {
+  return point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom;
+}
+
+function segmentHitsWall(from, to) {
+  if (level !== 2) return false;
+  const rect = getWallRect();
+  for (let i = 0; i <= 12; i++) {
+    const t = i / 12;
+    const point = {
+      x: from.x + (to.x - from.x) * t,
+      y: from.y + (to.y - from.y) * t,
+    };
+    if (pointInsideRect(point, rect)) return true;
+  }
+  return false;
+}
+
 function update(delta) {
+  updateWall(delta);
+
   if (isCharging) {
     chargePower += chargeDirection * delta * 1.45;
     if (chargePower >= maxPower) {
@@ -166,10 +221,18 @@ function update(delta) {
 
   if (!arrow) return;
 
+  const previousArrow = { x: arrow.x, y: arrow.y };
   arrow.vy += gravity * delta;
   arrow.x += arrow.vx * delta;
   arrow.y += arrow.vy * delta;
   arrow.angle = Math.atan2(arrow.vy, arrow.vx);
+
+  if (segmentHitsWall(previousArrow, arrow)) {
+    arrow = null;
+    message.textContent = "La flecha chocó contra la pared del nivel 2.";
+    setTimeout(nextTurn, 700);
+    return;
+  }
 
   const target = players[arrow.shooter === 0 ? 1 : 0];
   const zone = detectHit(target, arrow);
@@ -219,6 +282,51 @@ function drawHills() {
   ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
   ctx.fillStyle = "#233729";
   ctx.fillRect(0, groundY + 16, canvas.width, canvas.height - groundY - 16);
+}
+
+function drawWall() {
+  if (level !== 2) return;
+  const rect = getWallRect();
+
+  ctx.save();
+  ctx.fillStyle = "rgba(0, 0, 0, 0.22)";
+  ctx.fillRect(rect.left + 7, rect.top + 7, wall.width, wall.height);
+
+  const gradient = ctx.createLinearGradient(rect.left, rect.top, rect.right, rect.top);
+  gradient.addColorStop(0, "#5b6570");
+  gradient.addColorStop(0.5, "#b6c0ca");
+  gradient.addColorStop(1, "#49525c");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(rect.left, rect.top, wall.width, wall.height);
+
+  ctx.strokeStyle = "#1a2027";
+  ctx.lineWidth = 4;
+  ctx.strokeRect(rect.left, rect.top, wall.width, wall.height);
+
+  ctx.strokeStyle = "rgba(255,255,255,0.34)";
+  ctx.lineWidth = 2;
+  for (let y = rect.top + 22; y < rect.bottom; y += 34) {
+    ctx.beginPath();
+    ctx.moveTo(rect.left + 7, y);
+    ctx.lineTo(rect.right - 7, y);
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = "rgba(255,255,255,0.68)";
+  ctx.beginPath();
+  ctx.moveTo(rect.left + wall.width / 2, wall.minY - 28);
+  ctx.lineTo(rect.left + wall.width / 2 - 9, wall.minY - 10);
+  ctx.lineTo(rect.left + wall.width / 2 + 9, wall.minY - 10);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(rect.left + wall.width / 2, wall.maxY + wall.height + 28);
+  ctx.lineTo(rect.left + wall.width / 2 - 9, wall.maxY + wall.height + 10);
+  ctx.lineTo(rect.left + wall.width / 2 + 9, wall.maxY + wall.height + 10);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
 }
 
 function drawPlayer(player, isActive) {
@@ -344,6 +452,7 @@ function drawHitZones() {
 
 function draw() {
   drawSky();
+  drawWall();
   drawHitZones();
   drawPlayer(players[0], turn === 0);
   drawPlayer(players[1], turn === 1);
@@ -380,8 +489,15 @@ function resetGame() {
   chargeDirection = 1;
   arrow = null;
   gameOver = false;
+  wall.y = 170;
+  wall.direction = 1;
   message.textContent = "Apunta con el mouse. Mantené click para cargar y soltá para disparar.";
   updateUi();
+}
+
+function toggleLevel() {
+  level = level === 2 ? 1 : 2;
+  resetGame();
 }
 
 canvas.addEventListener("mousemove", (event) => {
@@ -411,6 +527,7 @@ canvas.addEventListener("touchend", (event) => {
 });
 
 resetButton.addEventListener("click", resetGame);
+levelButton.addEventListener("click", toggleLevel);
 
 resetGame();
 requestAnimationFrame(loop);
