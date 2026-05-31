@@ -21,13 +21,37 @@ const maxShotSpeed = 850;
 const wall = {
   x: 530,
   y: 150,
-  width: 50,
-  height: 200,
+  width: 64,
+  height: 275,
   minY: 80,
   maxY: 255,
   speed: 125,
   direction: 1,
 };
+const platforms = [
+  {
+    x: 88,
+    y: groundY,
+    width: 150,
+    height: 18,
+    minY: 315,
+    maxY: groundY,
+    speed: 92,
+    direction: -1,
+    color: "#387cc4",
+  },
+  {
+    x: 888,
+    y: groundY,
+    width: 150,
+    height: 18,
+    minY: 315,
+    maxY: groundY,
+    speed: 92,
+    direction: 1,
+    color: "#c46a38",
+  },
+];
 
 const players = [
   {
@@ -36,7 +60,7 @@ const players = [
     y: groundY,
     facing: 1,
     color: "#56a5ff",
-    health: 120,
+    health: 100,
   },
   {
     name: "Pauli",
@@ -44,7 +68,7 @@ const players = [
     y: groundY,
     facing: -1,
     color: "#ff9856",
-    health: 150,
+    health: 100,
   },
 ];
 
@@ -85,6 +109,12 @@ function getBowPosition(player) {
   };
 }
 
+function getLevelName() {
+  if (level === 3) return "Nivel 3: plataformas moviles";
+  if (level === 2) return "Nivel 2: pared movil";
+  return "Nivel 1: duelo libre";
+}
+
 function updateUi() {
   const hp1 = clamp(players[0].health, 0, 100);
   const hp2 = clamp(players[1].health, 0, 100);
@@ -97,13 +127,19 @@ function updateUi() {
   powerFill.style.width = `${Math.round(chargePower * 100)}%`;
   powerText.textContent = `${Math.round(chargePower * 100)}%`;
   turnLabel.textContent = gameOver ? "Partida terminada" : `Turno: ${players[turn].name}`;
-  levelLabel.textContent = level === 2 ? "Nivel 2: pared movil" : "Nivel 1: duelo libre";
+  levelLabel.textContent = getLevelName();
 
   if (level === 1 && !gameOver) {
     levelButton.textContent = "Nivel 2 bloqueado";
     levelButton.disabled = true;
   } else if (level === 1 && gameOver) {
     levelButton.textContent = "Avanzar al nivel 2";
+    levelButton.disabled = false;
+  } else if (level === 2 && !gameOver) {
+    levelButton.textContent = "Nivel 3 bloqueado";
+    levelButton.disabled = true;
+  } else if (level === 2 && gameOver) {
+    levelButton.textContent = "Avanzar al nivel 3";
     levelButton.disabled = false;
   } else {
     levelButton.textContent = "Volver al nivel 1";
@@ -159,9 +195,13 @@ function applyDamage(target, zone) {
   message.textContent = `${target.name} recibió un flechazo en ${labelByZone[zone]}: -${damage}.`;
   if (target.health <= 0) {
     gameOver = true;
-    message.textContent = level === 1
-      ? `${players[turn].name} ganó. Ahora podés avanzar al nivel 2.`
-      : `${players[turn].name} ganó el nivel 2.`;
+    if (level === 1) {
+      message.textContent = `${players[turn].name} ganó. Ahora podés avanzar al nivel 2.`;
+    } else if (level === 2) {
+      message.textContent = `${players[turn].name} ganó. Ahora podés avanzar al nivel 3.`;
+    } else {
+      message.textContent = `${players[turn].name} ganó el nivel 3.`;
+    }
   }
 }
 
@@ -188,6 +228,35 @@ function updateWall(delta) {
     wall.y = wall.minY;
     wall.direction = 1;
   }
+}
+
+function resetPlatforms() {
+  platforms[0].y = groundY;
+  platforms[0].direction = -1;
+  platforms[1].y = groundY;
+  platforms[1].direction = 1;
+  players[0].y = groundY;
+  players[1].y = groundY;
+}
+
+function updatePlatforms(delta) {
+  if (level !== 3) {
+    players[0].y = groundY;
+    players[1].y = groundY;
+    return;
+  }
+
+  platforms.forEach((platform, index) => {
+    platform.y += platform.direction * platform.speed * delta;
+    if (platform.y <= platform.minY) {
+      platform.y = platform.minY;
+      platform.direction = 1;
+    } else if (platform.y >= platform.maxY) {
+      platform.y = platform.maxY;
+      platform.direction = -1;
+    }
+    players[index].y = platform.y;
+  });
 }
 
 function getWallRect() {
@@ -219,6 +288,7 @@ function segmentHitsWall(from, to) {
 
 function update(delta) {
   updateWall(delta);
+  updatePlatforms(delta);
 
   if (isCharging) {
     chargePower += chargeDirection * delta * 1.45;
@@ -329,6 +399,30 @@ function drawWall() {
   ctx.textAlign = "center";
   ctx.fillText("PARED", rect.left + wall.width / 2, rect.top - 12);
   ctx.restore();
+}
+
+function drawPlatforms() {
+  if (level !== 3) return;
+
+  platforms.forEach((platform) => {
+    ctx.save();
+    ctx.fillStyle = "rgba(0,0,0,0.28)";
+    ctx.fillRect(platform.x + 8, platform.y + 14, platform.width, platform.height + 14);
+    ctx.fillStyle = platform.color;
+    ctx.fillRect(platform.x, platform.y + 6, platform.width, platform.height);
+    ctx.strokeStyle = "#f1c94c";
+    ctx.lineWidth = 4;
+    ctx.strokeRect(platform.x, platform.y + 6, platform.width, platform.height);
+    ctx.strokeStyle = "rgba(255,255,255,0.36)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(platform.x + 14, platform.minY - 22);
+    ctx.lineTo(platform.x + 14, platform.maxY + 32);
+    ctx.moveTo(platform.x + platform.width - 14, platform.minY - 22);
+    ctx.lineTo(platform.x + platform.width - 14, platform.maxY + 32);
+    ctx.stroke();
+    ctx.restore();
+  });
 }
 
 function drawPlayer(player, isActive) {
@@ -455,6 +549,7 @@ function drawHitZones() {
 function draw() {
   drawSky();
   drawWall();
+  drawPlatforms();
   drawHitZones();
   drawPlayer(players[0], turn === 0);
   drawPlayer(players[1], turn === 1);
@@ -468,7 +563,8 @@ function draw() {
     ctx.textAlign = "center";
     ctx.fillText(`${players[turn].name} gana`, canvas.width / 2, canvas.height / 2 - 10);
     ctx.font = "600 22px Segoe UI, sans-serif";
-    ctx.fillText(level === 1 ? "Tocá Avanzar al nivel 2" : "Tocá Reiniciar para jugar otra vez", canvas.width / 2, canvas.height / 2 + 34);
+    const nextText = level === 1 ? "Tocá Avanzar al nivel 2" : level === 2 ? "Tocá Avanzar al nivel 3" : "Tocá Reiniciar para jugar otra vez";
+    ctx.fillText(nextText, canvas.width / 2, canvas.height / 2 + 34);
   }
 }
 
@@ -493,15 +589,24 @@ function resetGame() {
   gameOver = false;
   wall.y = 150;
   wall.direction = 1;
-  message.textContent = level === 2
-    ? "Nivel 2: la pared móvil bloquea las flechas."
-    : "Apunta con el mouse. Mantené click para cargar y soltá para disparar.";
+  resetPlatforms();
+  message.textContent = level === 3
+    ? "Nivel 3: las plataformas suben y bajan. La flecha sale desde tu arco actual."
+    : level === 2
+      ? "Nivel 2: la pared móvil bloquea las flechas."
+      : "Apunta con el mouse. Mantené click para cargar y soltá para disparar.";
   updateUi();
 }
 
 function changeLevel() {
-  if (level === 1 && !gameOver) return;
-  level = level === 1 ? 2 : 1;
+  if (level < 3 && !gameOver) return;
+  if (level === 1) {
+    level = 2;
+  } else if (level === 2) {
+    level = 3;
+  } else {
+    level = 1;
+  }
   resetGame();
 }
 
