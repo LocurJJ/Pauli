@@ -19,20 +19,20 @@ const maxShotSpeed = 850;
 
 const players = [
   {
-    name: "Jugador 1",
+    name: "Josue",
     x: 160,
     y: groundY,
     facing: 1,
     color: "#56a5ff",
-    health: 100,
+    health: 120,
   },
   {
-    name: "Jugador 2",
+    name: "Pauli",
     x: 960,
     y: groundY,
     facing: -1,
     color: "#ff9856",
-    health: 100,
+    health: 150,
   },
 ];
 
